@@ -51,4 +51,4 @@ In conclusion, electricity is not just a convenience but a necessity for modern 
 
 vocab = text_to_vocab(text)
 
-save_vocab(vocab, "vocab.txt")
+save_vocab(vocab, "../data/vocab.txt")
