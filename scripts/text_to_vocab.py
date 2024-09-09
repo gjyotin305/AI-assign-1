@@ -19,8 +19,6 @@ def save_vocab(vocab, filename):
         for word in sorted(vocab):
             f.write(f"{word}\n")
 
-
 vocab = text_to_vocab(text)
-
 
 save_vocab(vocab, "../data/vocab.txt")
