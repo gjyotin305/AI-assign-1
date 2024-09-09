@@ -1,4 +1,5 @@
 import heapq
+import argparse
 import math
 import time
 import numpy as np
@@ -27,32 +28,43 @@ def read_vocabulary(filename: str) -> List[str]:
 def negative_log_likelihood(prob: float) -> float:
     return -math.log(prob) if prob > 0 else float('inf')
 
-def ucs(vocab, transition_matrix, n):
+
+def ucs(
+    vocab: List[str], 
+    transition_matrix: List[List[float]], 
+    n: int, 
+    L: int
+) -> Tuple[List[str], float, int]:
     pq = []
     start_word = "<SoS>"
     end_word = "<EoS>"
     nodes_explored = 1
     
-    for i in range(n):
+    # Initialize the priority queue with all possible starting words
+    for i in range(L):  # Changed from n to L
         score = transition_matrix[-2][i]  
         heapq.heappush(pq, (-score, i, 1, [start_word, vocab[i]]))
         nodes_explored += 1
 
     max_sentence, max_score = None, 0
     while pq:
-        score, index , depth, sentence = heapq.heappop(pq)
+        score, index, depth, sentence = heapq.heappop(pq)
 
         score = -score  
         nodes_explored += 1
+        
         if depth == n:
             sentence.append(end_word)
-            final_score = score * transition_matrix[-1][index]  
+            final_score = score * transition_matrix[index][-1]
             
             if final_score > max_score:
                 max_sentence, max_score = sentence, final_score
             continue
         
-        for i in range(n):  
+        if depth > n:
+            break
+        
+        for i in range(L):  # Changed from n to L
             next_score = transition_matrix[index][i]
             new_score = score * next_score
             new_sentence = sentence + [vocab[i]]
@@ -93,42 +105,43 @@ def iddfs(vocab, transition_matrix, n, L):
             
     return best_sentence, score
 
-def modified_iddfs(vocab, transition_matrix, n, L) -> Tuple[List[str], float]:
+def modified_iddfs(
+    vocab: List[str], 
+    transition_matrix: List[List[float]], 
+    n: int, 
+    L: int
+) -> Tuple[List[str], float, int]:
     q = []
 
     nodes_explored = 1
     start_word = "<SoS>"
     end_word = "<EoS>"
-    # Initialize from <SoS> using its transition probabilities
-    for i in range(n):
-        score = transition_matrix[-2][i]  # Transition from <SoS>
+    
+    # Initialize the queue with all possible starting words
+    for i in range(L):  # Changed from n to L
+        score = transition_matrix[-2][i]  
         q.append((score, i, 1, [start_word, vocab[i]]))
 
     best_sentence, max_score = None, 0
     while q:
-        # Pop the element at first index 
-        cur_score, index , depth, sentence = q.pop(0)
+        cur_score, index, depth, sentence = q.pop(0)
         nodes_explored += 1
-        # If we've reached the required number of words
-        if depth == L-2:
-            # Add <EoS> and calculate the final transition score
+        
+        if depth == n:  # Changed from L-2 to n
             sentence.append(end_word)
-            final_score = cur_score * transition_matrix[-1][index]  # Transition to <EoS>
+            final_score = cur_score * transition_matrix[index][-1]  # Changed from transition_matrix[-1][index]
             
-            # Update the max score and sentence
             if final_score > max_score:
                 best_sentence, max_score = sentence, final_score
 
-        elif depth>L-2:
+        elif depth > n:  # Changed from L-2 to n
             break                 
         
-        # Expand the next words from the current word
-        for i in range(n):  # Iterate over vocab words
+        for i in range(L):  # Changed from n to L
             next_prob = transition_matrix[index][i]
             new_score = cur_score * next_prob
             nodes_explored += 1
             new_sentence = sentence + [vocab[i]]
-            # Avoid paths that have been previously expanded from the same word
             q.append((new_score, i, depth + 1, new_sentence))
             
     return best_sentence, max_score, nodes_explored
@@ -261,7 +274,8 @@ class Experiment(object):
         optimal_sentence, score, nodes_explored = ucs(
             self.vocab[:self.L], 
             self.transition_matrix,
-            self.n
+            self.n,
+            self.L
         )
         end_time = time.time()
         logger.info(f"Time taken: {end_time - start_time}")
@@ -296,7 +310,7 @@ class Experiment(object):
             vocab=self.vocab,
             transition_matrix=self.transition_matrix,
             n=self.n,
-            L=self.L+2
+            L=self.L
         )
         end_time = time.time()
         logger.debug((" ".join(sentence)))
@@ -307,10 +321,20 @@ class Experiment(object):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="AI Assignmnet 1, Creator: Jyotin Goel"
+    )
+    parser.add_argument("--vocab", help="Path to vocabulary file")
+    parser.add_argument("--transition", help="Path to Transition Matrix file")
+    parser.add_argument("-l", help="Length of Vocabulary of L words")
+    parser.add_argument("-n", help="Length of Sentence of n+2 Words")
+    args = parser.parse_args()
+    
     check = Experiment(
-        "/home/gjyotin305/Desktop/AI-assign-1/data/sample_vocab.txt.txt", 
-        "/home/gjyotin305/Desktop/AI-assign-1/data/sample_transition.txt.txt", L=4, 
-        n=4
+        args.vocab, 
+        args.transition,
+        int(args.l), 
+        int(args.n)
     )
     check.build_transition()
     check.build_vocab()
