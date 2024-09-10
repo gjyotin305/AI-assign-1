@@ -1,0 +1,14 @@
+
+# Dependencies
+
+```bash
+pip install numpy loguru
+```
+
+# Instructions to run the code.
+
+To run the code 
+
+```bash
+python b22ai063.py --vocab <path_vocab> --transition <path_transition> -l <l> -n <n>
+```
